@@ -1,4 +1,4 @@
-diff '--color=auto' -ruN post-upstream/fs/Kconfig work-50/fs/Kconfig
+diff -ruN post-upstream/fs/Kconfig work-50/fs/Kconfig
 --- post-upstream/fs/Kconfig	2026-02-28 21:34:35.088892611 +0100
 +++ work-50/fs/Kconfig	2026-03-07 19:22:18.757136429 +0100
 @@ -352,3 +352,41 @@
@@ -43,9 +43,9 @@ diff '--color=auto' -ruN post-upstream/fs/Kconfig work-50/fs/Kconfig
 +    help
 +      Fixes upstream SUSFS concurrency and error-handling bugs.
 +      Disable to match exact upstream behavior.
-diff '--color=auto' -ruN post-upstream/fs/namei.c work-50/fs/namei.c
+diff -ruN post-upstream/fs/namei.c work-50/fs/namei.c
 --- post-upstream/fs/namei.c	2026-03-07 18:51:57.377764652 +0100
-+++ work-50/fs/namei.c	2026-03-08 06:34:03.729085376 +0100
++++ work-50/fs/namei.c	2026-03-08 14:20:54.277620086 +0100
 @@ -39,6 +39,9 @@
  #include <linux/bitops.h>
  #include <linux/init_task.h>
@@ -196,19 +196,19 @@ diff '--color=auto' -ruN post-upstream/fs/namei.c work-50/fs/namei.c
  retry:
  	dentry = user_path_create(dfd, pathname, &path, lookup_flags);
  	if (IS_ERR(dentry))
-@@ -4236,6 +4260,12 @@
- 	if ((flag & ~AT_REMOVEDIR) != 0)
- 		return -EINVAL;
- 
+@@ -4170,6 +4194,12 @@
+ 	struct inode *inode = NULL;
+ 	struct inode *delegated_inode = NULL;
+ 	unsigned int lookup_flags = 0;
 +#ifdef CONFIG_KSU_SUSFS_UNICODE_FILTER
-+	if (susfs_check_unicode_bypass(pathname)) {
++	if (!IS_ERR(name) && susfs_check_unicode_bypass(name->uptr)) {
++		putname(name);
 +		return -ENOENT;
 +	}
 +#endif
-+
- 	if (flag & AT_REMOVEDIR)
- 		return do_rmdir(dfd, getname(pathname));
- 	return do_unlinkat(dfd, getname(pathname));
+ retry:
+ 	name = filename_parentat(dfd, name, lookup_flags, &path, &last, &type);
+ 	if (IS_ERR(name))
 @@ -4276,6 +4306,12 @@
  	struct path path;
  	unsigned int lookup_flags = 0;
@@ -250,7 +250,7 @@ diff '--color=auto' -ruN post-upstream/fs/namei.c work-50/fs/namei.c
  	if (flags & ~(RENAME_NOREPLACE | RENAME_EXCHANGE | RENAME_WHITEOUT))
  		goto put_both;
  
-diff '--color=auto' -ruN post-upstream/fs/namespace.c work-50/fs/namespace.c
+diff -ruN post-upstream/fs/namespace.c work-50/fs/namespace.c
 --- post-upstream/fs/namespace.c	2026-03-07 18:51:57.513761611 +0100
 +++ work-50/fs/namespace.c	2026-03-07 19:22:18.815604378 +0100
 @@ -39,10 +39,9 @@
@@ -536,7 +536,7 @@ diff '--color=auto' -ruN post-upstream/fs/namespace.c work-50/fs/namespace.c
 +noinline void __used susfs_reorder_mnt_id(void) {}
  #endif
 -
-diff '--color=auto' -ruN post-upstream/fs/notify/fdinfo.c work-50/fs/notify/fdinfo.c
+diff -ruN post-upstream/fs/notify/fdinfo.c work-50/fs/notify/fdinfo.c
 --- post-upstream/fs/notify/fdinfo.c	2026-03-07 18:51:57.621759195 +0100
 +++ work-50/fs/notify/fdinfo.c	2026-03-07 19:22:18.866071536 +0100
 @@ -14,7 +14,7 @@
@@ -630,7 +630,7 @@ diff '--color=auto' -ruN post-upstream/fs/notify/fdinfo.c work-50/fs/notify/fdin
  		seq_printf(m, "inotify wd:%x ino:%lx sdev:%x mask:%x ignored_mask:0 ",
  			   inode_mark->wd, inode->i_ino, inode->i_sb->s_dev,
  			   inotify_mark_user_mask(mark));
-diff '--color=auto' -ruN post-upstream/fs/open.c work-50/fs/open.c
+diff -ruN post-upstream/fs/open.c work-50/fs/open.c
 --- post-upstream/fs/open.c	2026-03-07 18:51:57.693757585 +0100
 +++ work-50/fs/open.c	2026-03-08 06:34:48.100098718 +0100
 @@ -33,6 +33,9 @@
@@ -696,7 +696,7 @@ diff '--color=auto' -ruN post-upstream/fs/open.c work-50/fs/open.c
  	if (fd)
  		return fd;
  
-diff '--color=auto' -ruN post-upstream/fs/proc/base.c work-50/fs/proc/base.c
+diff -ruN post-upstream/fs/proc/base.c work-50/fs/proc/base.c
 --- post-upstream/fs/proc/base.c	2026-03-07 18:51:57.849754098 +0100
 +++ work-50/fs/proc/base.c	2026-03-07 19:22:18.945437423 +0100
 @@ -927,8 +927,9 @@
@@ -737,7 +737,7 @@ diff '--color=auto' -ruN post-upstream/fs/proc/base.c work-50/fs/proc/base.c
  #endif
  		if (++pos <= ctx->pos)
  			continue;
-diff '--color=auto' -ruN post-upstream/fs/proc/fd.c work-50/fs/proc/fd.c
+diff -ruN post-upstream/fs/proc/fd.c work-50/fs/proc/fd.c
 --- post-upstream/fs/proc/fd.c	2026-03-07 18:51:58.138102847 +0100
 +++ work-50/fs/proc/fd.c	2026-03-07 19:22:18.948196186 +0100
 @@ -15,7 +15,7 @@
@@ -825,7 +825,7 @@ diff '--color=auto' -ruN post-upstream/fs/proc/fd.c work-50/fs/proc/fd.c
  
  	show_fd_locks(m, file, files);
  	if (seq_has_overflowed(m))
-diff '--color=auto' -ruN post-upstream/fs/proc/task_mmu.c work-50/fs/proc/task_mmu.c
+diff -ruN post-upstream/fs/proc/task_mmu.c work-50/fs/proc/task_mmu.c
 --- post-upstream/fs/proc/task_mmu.c	2026-03-07 18:51:58.145747479 +0100
 +++ work-50/fs/proc/task_mmu.c	2026-03-07 19:22:18.987273092 +0100
 @@ -291,8 +291,9 @@
@@ -931,7 +931,7 @@ diff '--color=auto' -ruN post-upstream/fs/proc/task_mmu.c work-50/fs/proc/task_m
  			{
  				pm.buffer->pme = 0;
  			}
-diff '--color=auto' -ruN post-upstream/fs/proc_namespace.c work-50/fs/proc_namespace.c
+diff -ruN post-upstream/fs/proc_namespace.c work-50/fs/proc_namespace.c
 --- post-upstream/fs/proc_namespace.c	2026-03-07 18:51:58.361742650 +0100
 +++ work-50/fs/proc_namespace.c	2026-03-07 19:22:18.988415748 +0100
 @@ -14,7 +14,7 @@
@@ -979,7 +979,7 @@ diff '--color=auto' -ruN post-upstream/fs/proc_namespace.c work-50/fs/proc_names
  
  	/* device */
  	if (sb->s_op->show_devname) {
-diff '--color=auto' -ruN post-upstream/fs/readdir.c work-50/fs/readdir.c
+diff -ruN post-upstream/fs/readdir.c work-50/fs/readdir.c
 --- post-upstream/fs/readdir.c	2026-03-07 18:51:58.741734152 +0100
 +++ work-50/fs/readdir.c	2026-03-07 19:22:19.030337853 +0100
 @@ -175,7 +175,7 @@
@@ -1045,7 +1045,7 @@ diff '--color=auto' -ruN post-upstream/fs/readdir.c work-50/fs/readdir.c
  	}
  	iput(inode);
  orig_flow:
-diff '--color=auto' -ruN post-upstream/fs/stat.c work-50/fs/stat.c
+diff -ruN post-upstream/fs/stat.c work-50/fs/stat.c
 --- post-upstream/fs/stat.c	2026-03-07 18:51:58.977728875 +0100
 +++ work-50/fs/stat.c	2026-03-08 06:34:39.920280609 +0100
 @@ -17,11 +17,14 @@
@@ -1142,7 +1142,7 @@ diff '--color=auto' -ruN post-upstream/fs/stat.c work-50/fs/stat.c
  	if (bufsiz <= 0)
  		return -EINVAL;
  
-diff '--color=auto' -ruN post-upstream/fs/statfs.c work-50/fs/statfs.c
+diff -ruN post-upstream/fs/statfs.c work-50/fs/statfs.c
 --- post-upstream/fs/statfs.c	2026-03-07 18:51:59.125725566 +0100
 +++ work-50/fs/statfs.c	2026-03-07 19:22:19.032406707 +0100
 @@ -12,7 +12,7 @@
@@ -1172,9 +1172,9 @@ diff '--color=auto' -ruN post-upstream/fs/statfs.c work-50/fs/statfs.c
  }
  EXPORT_SYMBOL(vfs_statfs);
  
-diff '--color=auto' -ruN post-upstream/fs/susfs.c work-50/fs/susfs.c
+diff -ruN post-upstream/fs/susfs.c work-50/fs/susfs.c
 --- post-upstream/fs/susfs.c	2026-03-07 18:51:56.598238028 +0100
-+++ work-50/fs/susfs.c	2026-03-08 06:34:54.311960588 +0100
++++ work-50/fs/susfs.c	2026-03-08 14:20:46.173804576 +0100
 @@ -8,6 +8,7 @@
  #include <linux/list.h>
  #include <linux/init_task.h>
@@ -1960,7 +1960,21 @@ diff '--color=auto' -ruN post-upstream/fs/susfs.c work-50/fs/susfs.c
  			info.err = 0;
  			goto out_copy_to_user;
  		}
-@@ -570,8 +1102,8 @@
+@@ -524,10 +1056,12 @@
+ }
+ 
+ void susfs_spoof_uname(struct new_utsname* tmp) {
+-	if (unlikely(my_uname.release[0] == '\0' || spin_is_locked(&susfs_spin_lock_set_uname)))
++	if (unlikely(my_uname.release[0] == '\0'))
+ 		return;
++	spin_lock(&susfs_spin_lock_set_uname);
+ 	strncpy(tmp->release, my_uname.release, __NEW_UTS_LEN);
+ 	strncpy(tmp->version, my_uname.version, __NEW_UTS_LEN);
++	spin_unlock(&susfs_spin_lock_set_uname);
+ }
+ #endif // #ifdef CONFIG_KSU_SUSFS_SPOOF_UNAME
+ 
+@@ -570,8 +1104,8 @@
  	struct st_susfs_spoof_cmdline_or_bootconfig *info = (struct st_susfs_spoof_cmdline_or_bootconfig *)kzalloc(sizeof(struct st_susfs_spoof_cmdline_or_bootconfig), GFP_KERNEL);
  	
  	if (!info) {
@@ -1971,7 +1985,7 @@ diff '--color=auto' -ruN post-upstream/fs/susfs.c work-50/fs/susfs.c
  	}
  
  	if (copy_from_user(info, (struct st_susfs_spoof_cmdline_or_bootconfig __user*)*user_info, sizeof(struct st_susfs_spoof_cmdline_or_bootconfig))) {
-@@ -778,8 +1310,8 @@
+@@ -778,8 +1312,8 @@
  	size_t copied_size = 0;
  
  	if (!info) {
@@ -1982,7 +1996,7 @@ diff '--color=auto' -ruN post-upstream/fs/susfs.c work-50/fs/susfs.c
  	}
  
  	if (copy_from_user(info, (struct st_susfs_enabled_features __user*)*user_info, sizeof(struct st_susfs_enabled_features))) {
-@@ -798,7 +1330,7 @@
+@@ -798,7 +1332,7 @@
  	info->err = copy_config_to_buf("CONFIG_KSU_SUSFS_SUS_MOUNT\n", buf_ptr, &copied_size, SUSFS_ENABLED_FEATURES_SIZE);
  	if (info->err) goto out_copy_to_user;
  	buf_ptr = info->enabled_features + copied_size;
@@ -1991,7 +2005,24 @@ diff '--color=auto' -ruN post-upstream/fs/susfs.c work-50/fs/susfs.c
  #ifdef CONFIG_KSU_SUSFS_SUS_KSTAT
  	info->err = copy_config_to_buf("CONFIG_KSU_SUSFS_SUS_KSTAT\n", buf_ptr, &copied_size, SUSFS_ENABLED_FEATURES_SIZE);
  	if (info->err) goto out_copy_to_user;
-diff '--color=auto' -ruN post-upstream/include/linux/mount.h work-50/include/linux/mount.h
+@@ -834,6 +1368,16 @@
+ 	if (info->err) goto out_copy_to_user;
+ 	buf_ptr = info->enabled_features + copied_size;
+ #endif
++#ifdef CONFIG_KSU_SUSFS_SUS_KSTAT_REDIRECT
++	info->err = copy_config_to_buf("CONFIG_KSU_SUSFS_SUS_KSTAT_REDIRECT\n", buf_ptr, &copied_size, SUSFS_ENABLED_FEATURES_SIZE);
++	if (info->err) goto out_copy_to_user;
++	buf_ptr = info->enabled_features + copied_size;
++#endif
++#ifdef CONFIG_KSU_SUSFS_UNICODE_FILTER
++	info->err = copy_config_to_buf("CONFIG_KSU_SUSFS_UNICODE_FILTER\n", buf_ptr, &copied_size, SUSFS_ENABLED_FEATURES_SIZE);
++	if (info->err) goto out_copy_to_user;
++	buf_ptr = info->enabled_features + copied_size;
++#endif
+ 
+ 	info->err = 0;
+ out_copy_to_user:
+diff -ruN post-upstream/include/linux/mount.h work-50/include/linux/mount.h
 --- post-upstream/include/linux/mount.h	2026-03-07 18:51:59.257722615 +0100
 +++ work-50/include/linux/mount.h	2026-03-07 19:22:19.036015087 +0100
 @@ -77,11 +77,7 @@
@@ -2006,7 +2037,7 @@ diff '--color=auto' -ruN post-upstream/include/linux/mount.h work-50/include/lin
  } __randomize_layout;
  
  struct file; /* forward dec */
-diff '--color=auto' -ruN post-upstream/include/linux/susfs.h work-50/include/linux/susfs.h
+diff -ruN post-upstream/include/linux/susfs.h work-50/include/linux/susfs.h
 --- post-upstream/include/linux/susfs.h	2026-03-07 18:51:56.598458763 +0100
 +++ work-50/include/linux/susfs.h	2026-03-07 19:22:19.047515308 +0100
 @@ -8,6 +8,8 @@
@@ -2090,8 +2121,8 @@ diff '--color=auto' -ruN post-upstream/include/linux/susfs.h work-50/include/lin
 +
  /* susfs_init */
  void susfs_init(void);
-
-diff '--color=auto' -ruN post-upstream/include/linux/susfs_def.h work-50/include/linux/susfs_def.h
+ 
+diff -ruN post-upstream/include/linux/susfs_def.h work-50/include/linux/susfs_def.h
 --- post-upstream/include/linux/susfs_def.h	2026-03-07 18:51:56.598521713 +0100
 +++ work-50/include/linux/susfs_def.h	2026-03-07 19:22:19.047987667 +0100
 @@ -18,6 +18,7 @@
